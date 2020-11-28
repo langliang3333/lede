@@ -989,11 +989,11 @@ static unsigned int fast_classifier_post_routing(struct sk_buff *skb, bool is_v4
 		 */
 		if (ntohs(sic.dest_port) == 4500 || ntohs(sic.dest_port) == 500) {
 			if (likely(is_v4))
-				DEBUG_TRACE("quarkysg:: IPsec bypass: %pI4:%d(%pI4:%d) to %pI4:%d(%pI4:%d)\n",
+				DEBUG_TRACE("IPsec bypass: %pI4:%d(%pI4:%d) to %pI4:%d(%pI4:%d)\n",
 					&sic.src_ip.ip, ntohs(sic.src_port), &sic.src_ip_xlate.ip, ntohs(sic.src_port_xlate),
 					&sic.dest_ip.ip, ntohs(sic.dest_port), &sic.dest_ip_xlate.ip, ntohs(sic.dest_port_xlate));
 			else
-				DEBUG_TRACE("quarkysg:: IPsec bypass: %pI6:%d to %pI6:%d\n",
+				DEBUG_TRACE("IPsec bypass: %pI6:%d to %pI6:%d\n",
 					&sic.src_ip.ip6, ntohs(sic.src_port), &sic.dest_ip.ip6, ntohs(sic.dest_port));
 			return NF_ACCEPT;
 		}
@@ -1346,10 +1346,10 @@ static int fast_classifier_conntrack_event(unsigned int events, struct nf_ct_eve
 
 	if (is_v4) {
 		DEBUG_TRACE("Try to clean up: proto: %d src_ip: %pI4 dst_ip: %pI4, src_port: %d, dst_port: %d\n",
-			    sid.protocol, &sid.src_ip, &sid.dest_ip, ntohs(sid.src_port), ntohs(sid.dest_port));
+			    sid.protocol, &sid.src_ip, &sid.dest_ip, sid.src_port, sid.dest_port);
 	} else {
 		DEBUG_TRACE("Try to clean up: proto: %d src_ip: %pI6 dst_ip: %pI6, src_port: %d, dst_port: %d\n",
-			    sid.protocol, &sid.src_ip, &sid.dest_ip, ntohs(sid.src_port), ntohs(sid.dest_port));
+			    sid.protocol, &sid.src_ip, &sid.dest_ip, sid.src_port, sid.dest_port);
 	}
 
 	spin_lock_bh(&sfe_connections_lock);
@@ -1801,12 +1801,14 @@ static int __init fast_classifier_init(void)
 	/*
 	 * Register our netfilter hooks.
 	 */
-	result = nf_register_net_hooks(&init_net, fast_classifier_ops_post_routing, ARRAY_SIZE(fast_classifier_ops_post_routing));
+	result = nf_register_net_hooks(&init_net, fast_classifier_ops_post_routing, \
+				       ARRAY_SIZE(fast_classifier_ops_post_routing));
 	if (result < 0) {
 		DEBUG_ERROR("can't register nf post routing hook: %d\n", result);
 		goto exit3;
 	}
 
+#ifdef CONFIG_NF_CONNTRACK_EVENTS
 	/*
 	 * Register a notifier hook to get fast notifications of expired connections.
 	 */
@@ -1814,6 +1816,7 @@ static int __init fast_classifier_init(void)
 	result = nf_conntrack_register_chain_notifier(&init_net, &fast_classifier_conntrack_notifier);
 #else
 	result = nf_conntrack_register_notifier(&init_net, &fast_classifier_conntrack_notifier);
+#endif
 	if (result < 0) {
 		DEBUG_ERROR("can't register nf notifier hook: %d\n", result);
 		goto exit4;
@@ -1887,7 +1890,8 @@ exit5:
 
 exit4:
 #endif
-	nf_unregister_net_hooks(&init_net, fast_classifier_ops_post_routing, ARRAY_SIZE(fast_classifier_ops_post_routing));
+	nf_unregister_net_hooks(&init_net, fast_classifier_ops_post_routing, \
+				ARRAY_SIZE(fast_classifier_ops_post_routing));
 
 exit3:
 	unregister_inetaddr_notifier(&sc->inet_notifier);
@@ -1957,7 +1961,8 @@ static void __exit fast_classifier_exit(void)
 	nf_conntrack_unregister_notifier(&init_net, &fast_classifier_conntrack_notifier);
 #endif
 #endif
-	nf_unregister_net_hooks(&init_net, fast_classifier_ops_post_routing, ARRAY_SIZE(fast_classifier_ops_post_routing));
+	nf_unregister_net_hooks(&init_net, fast_classifier_ops_post_routing, \
+				ARRAY_SIZE(fast_classifier_ops_post_routing));
 
 	unregister_inet6addr_notifier(&sc->inet6_notifier);
 	unregister_inetaddr_notifier(&sc->inet_notifier);

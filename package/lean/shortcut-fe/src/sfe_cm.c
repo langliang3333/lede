@@ -1036,7 +1036,8 @@ static int __init sfe_cm_init(void)
 	/*
 	 * Register our netfilter hooks.
 	 */
-	result = nf_register_net_hooks(&init_net, sfe_cm_ops_post_routing, ARRAY_SIZE(sfe_cm_ops_post_routing));
+	result = nf_register_net_hooks(&init_net, sfe_cm_ops_post_routing, \
+				       ARRAY_SIZE(sfe_cm_ops_post_routing));
 	if (result < 0) {
 		DEBUG_ERROR("can't register nf post routing hook: %d\n", result);
 		goto exit3;
@@ -1077,8 +1078,9 @@ static int __init sfe_cm_init(void)
 #ifdef CONFIG_NF_CONNTRACK_EVENTS
 #ifndef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
 exit4:
-	nf_unregister_net_hooks(&init_net, sfe_cm_ops_post_routing, ARRAY_SIZE(sfe_cm_ops_post_routing));
 #endif
+	nf_unregister_net_hooks(&init_net, sfe_cm_ops_post_routing, \
+				ARRAY_SIZE(sfe_cm_ops_post_routing));
 #endif
 exit3:
 	unregister_inet6addr_notifier(&sc->inet6_notifier);
@@ -1129,7 +1131,8 @@ static void __exit sfe_cm_exit(void)
 	nf_conntrack_unregister_notifier(&init_net, &sfe_cm_conntrack_notifier);
 #endif
 #endif
-	nf_unregister_net_hooks(&init_net, sfe_cm_ops_post_routing, ARRAY_SIZE(sfe_cm_ops_post_routing));
+	nf_unregister_net_hooks(&init_net, sfe_cm_ops_post_routing, \
+				ARRAY_SIZE(sfe_cm_ops_post_routing));
 
 	unregister_inet6addr_notifier(&sc->inet6_notifier);
 	unregister_inetaddr_notifier(&sc->inet_notifier);
